@@ -15,7 +15,6 @@ const generateCallid = () => {
   return `${branchId}`;
 };
 
-
 class Listener{
     constructor(){
         
@@ -31,6 +30,7 @@ class SIP{
         this.port = (typeof props.port !== 'undefined') ? props.port : 5060;
         this.username = (typeof props.username !== 'undefined') ? props.username : "";
         this.password = (typeof props.password !== 'undefined') ? props.password : "";
+        this.domain = (typeof props.domain !== 'undefined') ? props.domain : "";
         this.type = (typeof props.type !== 'undefined') ? props.type : "client";
         this.Socket = dgram.createSocket("udp4");
         this.callId = generateCallid();
@@ -136,10 +136,13 @@ class SIP{
         var constructed_message = typeof message === 'object' ? Builder.Build(message.message) : message;
         return new Promise((resolve) => {
             if(typeof identity.port !== 'undefined' && typeof identity.ip !== 'undefined'){
-                this.Socket.send(constructed_message, 0, constructed_message.length, Number(identity.port), identity.ip, (error) => {
+                let host = identity.ip;
+                let port = Number(identity.port);
+
+                this.Socket.send(constructed_message, 0, constructed_message.length, port, host, (error) => {
                     if (!error) {
                         this.push_to_stack(message);
-                        console.log(message)
+                        console.log('Send: host: %s, port: %s, message: %s', host, ip, message);
                         if(typeof this.dialog_stack[message.tag] !== 'undefined'){
                             this.dialog_stack[message.tag].messages.push(message)
                         }
@@ -168,6 +171,15 @@ class SIP{
         }
         this.username = props.username;
         this.password = props.password;
+
+        let from = `<sip:${props.username}@${this.ip}>;tag=${Builder.generateBranch()}`;
+        let to = `<sip:${props.username}@${this.ip}>`;
+
+        if (this.domain) {
+            from = `<sip:${props.username}@${this.domain}>;tag=${Builder.generateBranch()}`;
+            to = `<sip:${props.username}@${this.domain}>`;
+        }
+
         return new Promise(resolve => {
             var message = this.Message({
                 isResponse: false,
@@ -176,8 +188,8 @@ class SIP{
                 requestUri: `sip:${this.ip}:${this.port}`,
                 headers: {
                     'Via': `SIP/2.0/UDP ${this.listen_ip}:${this.listen_port};branch=${Builder.generateBranch()}`,
-                    'From': `<sip:${props.username}@${this.ip}>;tag=${Builder.generateBranch()}`,
-                    'To': `<sip:${props.username}@${this.ip}>`,
+                    'From': from,
+                    'To': to,
                     'Call-ID': `${this.callId}@${this.listen_ip}`,
                     'CSeq': `1 REGISTER`,
                     'Contact': `<sip:${props.username}@${this.listen_ip}:${this.listen_port}>`,
@@ -191,18 +203,27 @@ class SIP{
 
             this.Dialog(message).then(dialog => {
                 dialog.on('401', (res) => {
-                    console.log(res)
-                    var a = message.Authorize({username: this.username, password: this.password}, res); //generate authorized message from the original invite request
+                    console.log('on 401', res)
+                    var a = message.Authorize({
+                        username: this.username,
+                        password: this.password,
+                        domain: this.domain
+                    }, res); //generate authorized message from the original invite request
                     this.send(a)
                 })
 
                 dialog.on('407', (res) => {
-                    console.log(res)
-                    var a = message.Authorize({username: this.username, password: this.password}, res); //generate authorized message from the original invite request
-                    this.send(a)
+                    console.log('on 407', res)
+                    var a = message.Authorize({
+                        username: this.username,
+                        password: this.password,
+                        domain: this.domain
+                    }, res); //generate authorized message from the original invite request
+                    // this.send(a)
                 })
 
                 dialog.on('200', (res) => {
+                    console.log('on 200', res)
                     resolve(dialog);
                 })
             })

@@ -82,7 +82,15 @@ class SIPMessage{
         var realm = (is_proxy_auth) ? headers['Proxy-Authenticate'].realm : headers['WWW-Authenticate'].realm
         var response = Builder.DigestResponse(credentials.username, credentials.password, realm, nonce, message.method, `${message.requestUri}`);
         message.headers.CSeq = `${Parser.getCseq(message) + 1} ${message.method}`;
-        message.headers['Proxy-Authorization'] = `Digest username="${credentials.username}", realm="${realm}", nonce="${nonce}", uri="${message.requestUri}", response="${response}", algorithm=MD5`;
+
+        var authorization = `Digest username="${credentials.username}", realm="${realm}", nonce="${nonce}", uri="${message.requestUri}", response="${response}", algorithm=MD5`;
+
+        if (credentials.domain) {
+            `Digest username="${credentials.username}", realm="${realm}", nonce="${nonce}", uri="sip:${credentials.domain}", response="${response}", algorithm=MD5`
+        }
+
+        message.headers['Authorization'] = authorization;
+        message.headers['Proxy-Authorization'] = authorization;
         return message //build message from object.
     }
 }
