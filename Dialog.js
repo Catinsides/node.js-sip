@@ -8,15 +8,13 @@ const SIPMessage = require("./SIPMessage");
 
 class Dialog{
     constructor(context, message){
-        return new Promise(resolve => {
-            this.message = message;
-            this.messages = []
-            this.branchId = this.message.branchId
-            this.tag = this.message.tag;
-            this.events = {};
-            context.push_to_dialog_stack(this);
-            resolve(this)
-        })
+        this.message = message;
+        this.messages = []
+        this.branchId = this.message.branchId
+        this.tag = this.message.tag;
+        this.events = {};
+        context.push_to_dialog_stack(this);
+        return this;
     }
 
     on(event, callback){

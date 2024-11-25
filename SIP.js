@@ -97,28 +97,28 @@ class SIP{
     Listen() {
         this.Socket.on('message', (res_message) => {
             var ret;
-            res_message = res_message.toString();
-            if(res_message.length > 4){
-                var sipMessage = this.FixNAT(this.Message(res_message));
+            var message = res_message.toString();
+            if (message.length > 4) {
+                var sipMessage = this.FixNAT(this.Message(message));
                 var message_ev = sipMessage.message.isResponse ? String(sipMessage.message.statusCode) : sipMessage.message.method;
                 this.push_to_stack(sipMessage);
-                if(typeof this.dialog_stack[sipMessage.tag] !== 'undefined'){
+                if (typeof this.dialog_stack[sipMessage.tag] !== 'undefined') {
                     this.dialog_stack[sipMessage.tag].messages.push(sipMessage)
                 }
-   
+
                 //this.emitter.emit('MESSAGE', Builder.Build(sipMessage.message));
-                this.emitter.emit('MESSAGE', res_message)
+                this.emitter.emit('MESSAGE', message)
                 if (this.DialogExists(sipMessage.tag)) {
                     var d = this.dialog_stack[sipMessage.tag];
                     if (Object.keys(d.events).includes(message_ev)) {
                         d.events[message_ev](sipMessage);
                     }
                     ret = d;
-                }else{
+                } else {
                     //if there is not dialog for this message create one with the first message in the stack
                     this.Dialog(this.message_stack[sipMessage.tag][0]).then((dialog) => {
-                            ret = dialog;
-                    })    
+                        ret = dialog;
+                    })
 
                     if (Object.keys(this.events).includes(message_ev)) {
                         this.events[message_ev](sipMessage);
@@ -142,7 +142,7 @@ class SIP{
                 this.Socket.send(constructed_message, 0, constructed_message.length, port, host, (error) => {
                     if (!error) {
                         this.push_to_stack(message);
-                        console.log('Send: host: %s, port: %s, message: %s', host, ip, message);
+                        console.log('Send: host: %s, port: %s, message: %s', host, port, message);
                         if(typeof this.dialog_stack[message.tag] !== 'undefined'){
                             this.dialog_stack[message.tag].messages.push(message)
                         }
@@ -155,9 +155,8 @@ class SIP{
 
     Dialog(message){
         return new Promise(resolve => {
-            var dialog = new Dialog(this, message).then(dialog => {
-                resolve(dialog);
-            })
+            var dialog = new Dialog(this, message);
+            resolve(dialog);
         })
     }
 
@@ -167,7 +166,9 @@ class SIP{
 
     Register(props){
         if(typeof props !== 'object'){
-            return {error: "props must be an object"}
+            return Promise.reject({
+                error: "props must be an object"
+            });
         }
         this.username = props.username;
         this.password = props.password;
