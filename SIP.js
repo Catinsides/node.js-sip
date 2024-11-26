@@ -1,13 +1,13 @@
 const dgram = require("dgram");
-const net = require("net");
-const crypto = require("crypto");
+// const net = require("net");
+// const crypto = require("crypto");
 const Builder = require("./Builder");
 const Parser = require("./Parser");
-const SDPParser = require("./SDPParser");
+// const SDPParser = require("./SDPParser");
 const Dialog = require("./Dialog");
 const SIPMessage = require("./SIPMessage");
-const Transaction = require("./Transaction");
-const os = require("os");
+// const Transaction = require("./Transaction");
+// const os = require("os");
 const EventEmitter = require('events');
 
 const Logger = require('./logger');
@@ -37,18 +37,20 @@ class SIP {
     this.type = (typeof props.type !== 'undefined') ? props.type : "client";
     this.Socket = dgram.createSocket("udp4");
     this.callId = generateCallid();
-    this.events = [];
+    this.events = {};
     this.transactions = []
     this.message_stack = {};
     this.dialog_stack = {};
     this.NAT_TABLE = {}
     this.log_buffer = {}
 
-
-
     this.Socket.bind(this.listen_port, this.listen_ip)
     this.Listen()
     this.emitter = new EventEmitter();
+
+    this.retry = 0;
+    this.retryLimit = (typeof props.retryLimit !== 'undefined') ? props.retryLimit : 10;
+    this.retryDelay = (typeof props.retryDelay !== 'undefined') ? props.retryDelay : 2000;
 
     return this;
   }
@@ -173,6 +175,13 @@ class SIP {
         error: "props must be an object"
       });
     }
+
+    if (this.retry > this.retryLimit) {
+      return Promise.reject({
+        error: "retry limit reached"
+      });
+    }
+
     this.username = props.username;
     this.password = props.password;
 
@@ -184,8 +193,8 @@ class SIP {
       to = `<sip:${props.username}@${this.domain}>`;
     }
 
-    return new Promise(resolve => {
-      var message = this.Message({
+    return new Promise((resolve, reject) => {
+      let message = this.Message({
         isResponse: false,
         protocol: "SIP/2.0",
         method: "REGISTER",
@@ -202,34 +211,46 @@ class SIP {
           'Content-Length': '0'
         },
         body: ''
-      })
+      });
+
       this.send(message)
 
       this.Dialog(message).then(dialog => {
         dialog.on('401', (res) => {
-          logger.d('on 401', res)
-          var a = message.Authorize({
-            username: this.username,
-            password: this.password,
-            domain: this.domain
-          }, res); //generate authorized message from the original invite request
-          this.send(a)
-        })
+          logger.d('on 401', res);
+          this.retry += 1;
+
+          setTimeout(() => {
+            let a = message.Authorize({
+              username: this.username,
+              password: this.password,
+              domain: this.domain
+            }, res); //generate authorized message from the original invite request
+
+            this.send(a);
+          }, this.retryDelay);
+        });
 
         dialog.on('407', (res) => {
-          logger.d('on 407', res)
-          var a = message.Authorize({
-            username: this.username,
-            password: this.password,
-            domain: this.domain
-          }, res); //generate authorized message from the original invite request
-          // this.send(a)
-        })
+          logger.d('on 407', res);
+          this.retry += 1;
+
+          setTimeout(() => {
+            let a = message.Authorize({
+              username: this.username,
+              password: this.password,
+              domain: this.domain
+            }, res); //generate authorized message from the original invite request
+
+            this.send(a);
+          }, this.retryDelay);
+        });
 
         dialog.on('200', (res) => {
-          logger.d('on 200', res)
+          logger.d('on 200', res);
+          this.retry = 0;
           resolve(dialog);
-        })
+        });
       })
     })
   }
