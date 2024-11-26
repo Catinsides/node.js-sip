@@ -1,16 +1,16 @@
-class Logger{
-    constructor(){
-        this.errors = [];
-        this.info = [];
-    }
+class Logger {
+  constructor() {
+    this.errors = [];
+    this.info = {};
+  }
 
-    log(text){
-        this.info[new Date.now()] = text;
-    }
+  log(text) {
+    this.info[Date.now()] = text;
+  }
 
-    error(text){
-        this.error[new Date.now()] = text;
-    }
+  error(text) {
+    this.error[Date.now()] = text;
+  }
 }
 
 module.exports = Logger

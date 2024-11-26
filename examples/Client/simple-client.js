@@ -56,7 +56,7 @@ Client.on('INVITE', (res) => {
             console.log("BYE")
             res.message.headers['Cseq'] = res.message.headers['CSeq'].split(' ')[0] + ' BYE'
             Client.send(res.CreateResponse(200))
-            dialog.kill()
+            // dialog.kill()
         })
 
         dialog.on('CANCEL', (res) => {

@@ -44,6 +44,10 @@ class SIPMessage {
     delete r.method
     r.requestUri = `${type} ${(typeof props.message !== 'undefined') ? props.message : responses[Number(type)]}`;
 
+    if (props.headers) {
+      r.headers = Object.assign(r.headers, props.headers);
+    }
+
     return r
   }
 
