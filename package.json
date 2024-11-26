@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "asterisk-manager": "^0.2.0",
+    "debug": "^4.3.7",
     "ffmpeg": "^0.0.4",
     "fluent-ffmpeg": "^2.1.2",
     "ip": "^1.1.8",

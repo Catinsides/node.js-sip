@@ -6,20 +6,20 @@ const Builder = require("./Builder");
 const Parser = require("./Parser");
 const SIPMessage = require("./SIPMessage");
 
-class Dialog{
-    constructor(context, message){
-        this.message = message;
-        this.messages = []
-        this.branchId = this.message.branchId
-        this.tag = this.message.tag;
-        this.events = {};
-        context.push_to_dialog_stack(this);
-        return this;
-    }
+class Dialog {
+  constructor(context, message) {
+    this.message = message;
+    this.messages = []
+    this.branchId = this.message.branchId
+    this.tag = this.message.tag;
+    this.events = {};
+    context.push_to_dialog_stack(this);
+    return this;
+  }
 
-    on(event, callback){
-        this.events[event] = callback;
-    }
+  on(event, callback) {
+    this.events[event] = callback;
+  }
 }
 
 module.exports = Dialog;
